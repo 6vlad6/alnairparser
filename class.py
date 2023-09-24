@@ -199,17 +199,118 @@ class Parser:
         Собрать информацию по всем проектам
         :return: массив
         """
+        projects = self.collect_projects()  # все объекты
+        projects_res = []
 
         info_dict = self.get_additional_info()  # получение словаря доп информации по объекту
-        projects = self.collect_projects()  # все объекты
+        for project in projects[:3]:
+            try:
+                project_dict = {}
+                r = requests.get(self.url_rc.format(project[0]))
+                project_data = json.loads(r.text)
 
-        projects_res = []
-        for project in projects:
-            project_res = self.get_project_info(project)
-            projects_res.append(project_res)
+                description = ''
+                try:
+                    description = self.remove_html_tags(project_data['description'])
+                except:
+                    pass
+
+                address = ''
+                try:
+                    address = project_data['address']
+                except:
+                    pass
+
+                predicted_completion_date = ''
+                try:
+                    predicted_completion_date = project_data['predicted_completion_at'].split()[0]
+                except:
+                    pass
+
+                developer = ''
+                try:
+                    developer = project_data['developer']['title']
+                except:
+                    pass
+
+                photos = []
+                try:
+                    photos_arr = project_data['presentation']
+
+                    for elem in photos_arr:
+                        photos.append(elem['url'])
+                except:
+                    pass
+
+                if project[1] == "rc":
+                    project_type = 'apartments'
+
+                    floors = ''
+                    try:
+                        floors = project_data['stats']['total']['unitsMaxFloor']
+                    except:
+                        pass
+
+                    advantages = []
+                    try:
+                        advantages_ids = project_data['catalogs']['residential_complex_advantages']
+
+                        for advantage in advantages_ids:
+                            advantages.append(info_dict[advantage])
+                    except:
+                        pass
+
+                    project_dict = {
+                        'type': project_type,
+                        'description': description,
+                        'address': address,
+                        'predicted_completion_date': predicted_completion_date,
+                        'area': floors,
+                        'developer': developer,
+                        'advantages': advantages,
+                        'photos': photos
+                    }
+
+                elif project[1] == 'village':
+                    project_type = "villa"
+
+                    advantages = []
+                    try:
+                        advantages_ids = project_data['catalogs']['village_advantages']
+
+                        for advantage in advantages_ids:
+                            advantages.append(info_dict[advantage])
+                    except:
+                        pass
+
+                    cottages_data = []
+                    try:
+                        cottages = project_data['stats']['cottages']
+                        for cottage_type in cottages:
+                            cottage_data = cottages[cottage_type]
+                            cottages_data.append(
+                                [cottage_data['squareMin'], cottage_data['sumMin'], cottage_data['sumMax']])
+                    except:
+                        pass
+
+                    project_dict = {
+                        'type': project_type,
+                        'description': description,
+                        'address': address,
+                        'predicted_completion_date': predicted_completion_date,
+                        'developer': developer,
+                        'advantages': advantages,
+                        'photos': photos,
+                        'area': cottages_data
+                    }
+
+                projects_res.append(project_dict)
+
+            except Exception as e:
+                print(project[0], " - ", str(e))
+                pass
 
         return projects_res
-
 
 parser = Parser(BASE_URL, APARTMENTS_URL, VILLA_URL, INFO_URL)
 res = parser.get_projects_info()
