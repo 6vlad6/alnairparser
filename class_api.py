@@ -9,18 +9,21 @@ VILLA_URL = "https://api.alnair.ae/v1/village/view/{}"
 INFO_URL = "https://api.alnair.ae/v1/info"
 
 class Parser:
-    def __init__(self, url_projects, url_rc, url_village, url_info):
+    def __init__(self, url_projects, url_rc, url_village, url_info, last_id):
         """
         Инициализация класса
         :param url_projects: шаблон url для сбора проектов
         :param url_rc: шаблон url страницы квартиры
         :param url_village: шаблон url страницы виллы
+        :param url_info: url страницы с доп информацией
+        :param last_id: последний обработанный id
         """
 
         self.url_projects = url_projects
         self.url_rc = url_rc
         self.url_village = url_village
         self.url_info = url_info
+        self.last_id = last_id
 
     def remove_html_tags(self, text):
         """
@@ -68,7 +71,8 @@ class Parser:
 
             new_projects = []
             for project in projects_data:
-                new_projects.append([project['id'], project['type']])
+                if project['id'] > self.last_id:
+                    new_projects.append([project['id'], project['type']])
 
             if prev_projects == new_projects:
                 break
@@ -126,6 +130,12 @@ class Parser:
             except:
                 pass
 
+            brochure = ''
+            try:
+                brochure = project_data['documents'][0]['url']
+            except:
+                pass
+
             if project[1] == "rc":
                 project_type = 'apartments'
 
@@ -144,14 +154,27 @@ class Parser:
                 except:
                     pass
 
+                rooms_data = []
+                try:
+                    rooms = project_data['buildings'][0]['stats']['apartments']
+
+                    for room_type in rooms:
+                        room_data = rooms[room_type]
+                        rooms_data.append([room_data['count'], room_data['sumMin']])
+                except:
+                    pass
+
                 project_dict = {
+                    'id': project[0],
                     'type': project_type,
                     'description': description,
                     'address': address,
                     'predicted_completion_date': predicted_completion_date,
                     'area': floors,
+                    'rooms': rooms_data,
                     'developer': developer,
                     'advantages': advantages,
+                    'brochure': brochure,
                     'photos': photos
                 }
 
@@ -178,14 +201,16 @@ class Parser:
                     pass
 
                 project_dict = {
+                    'id': project[0],
                     'type': project_type,
                     'description': description,
                     'address': address,
                     'predicted_completion_date': predicted_completion_date,
+                    'area': cottages_data,
                     'developer': developer,
                     'advantages': advantages,
-                    'photos': photos,
-                    'area': cottages_data
+                    'brochure': brochure,
+                    'photos': photos
                 }
 
             return project_dict
@@ -233,6 +258,12 @@ class Parser:
                 except:
                     pass
 
+                brochure = ''
+                try:
+                    brochure = project_data['documents'][0]['url']
+                except:
+                    pass
+
                 photos = []
                 try:
                     photos_arr = project_data['presentation']
@@ -260,14 +291,27 @@ class Parser:
                     except:
                         pass
 
+                    rooms_data = []
+                    try:
+                        rooms = project_data['buildings'][0]['stats']['apartments']
+
+                        for room_type in rooms:
+                            room_data = rooms[room_type]
+                            rooms_data.append([room_data['count'], room_data['sumMin']])
+                    except:
+                        pass
+
                     project_dict = {
+                        'id': project[0],
                         'type': project_type,
                         'description': description,
                         'address': address,
                         'predicted_completion_date': predicted_completion_date,
                         'area': floors,
+                        'rooms': rooms_data,
                         'developer': developer,
                         'advantages': advantages,
+                        'brochure': brochure,
                         'photos': photos
                     }
 
@@ -294,14 +338,16 @@ class Parser:
                         pass
 
                     project_dict = {
+                        'id': project[0],
                         'type': project_type,
                         'description': description,
                         'address': address,
                         'predicted_completion_date': predicted_completion_date,
+                        'area': cottages_data,
                         'developer': developer,
                         'advantages': advantages,
+                        'brochure': brochure,
                         'photos': photos,
-                        'area': cottages_data
                     }
 
                 projects_res.append(project_dict)
@@ -312,6 +358,6 @@ class Parser:
 
         return projects_res
 
-parser = Parser(BASE_URL, APARTMENTS_URL, VILLA_URL, INFO_URL)
-res = parser.get_projects_info()
+parser = Parser(BASE_URL, APARTMENTS_URL, VILLA_URL, INFO_URL, 1548)
+res = parser.get_project_info([1555, "rc"])
 print(res)
