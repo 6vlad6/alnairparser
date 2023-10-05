@@ -116,76 +116,81 @@ class Parser:
         page_markup = page_data.get_attribute('innerHTML')
         page_soup = BeautifulSoup(page_markup, 'html.parser')
 
-        room_blocks =  page_soup.find_all('div', class_='_root_16pwg_1 _hasTypicalLayouts_16pwg_8')
+        # room_blocks =  page_soup.find_all('div', class_='_root_16pwg_1 _hasTypicalLayouts_16pwg_8')
+        room_blocks =  page_soup.find_all('div', class_='_root_16pwg_1')
 
         buildings = []
 
         for room_block in room_blocks:
-            room_block_title = room_block.find('div', class_="CssMediaQuery _hide_md_14ik7_74")
-            total_units = room_block_title.find_all('span', class_="_root_8nc73_1 _sizeXS_8nc73_9")[0].text.split()[0]
-            min_max_squares = room_block_title.find_all('span', class_="_root_8nc73_1 _sizeXS_8nc73_9")[1].text
+            block_dict = {}
+            try:
+                room_block_title = room_block.find('div', class_="CssMediaQuery _hide_md_14ik7_74")
+                total_units = room_block_title.find_all('span', class_="_root_8nc73_1 _sizeXS_8nc73_9")[0].text.split()[0]
+                min_max_squares = room_block_title.find_all('span', class_="_root_8nc73_1 _sizeXS_8nc73_9")[1].text
 
-            block_min_square = ''
-            block_max_square = ''
+                block_min_square = ''
+                block_max_square = ''
 
-            if "—" in min_max_squares:
-                parts = min_max_squares.split("—")
-                block_min_square = parts[0].split()[0]
-                block_max_square = parts[1].split()[0]
+                if "—" in min_max_squares:
+                    parts = min_max_squares.split("—")
+                    block_min_square = parts[0].split()[0]
+                    block_max_square = parts[1].split()[0]
 
-            block_price_min = room_block.find('span', '_root_8nc73_1 _sizeXS_8nc73_9 font-bold').text
-            block_price_min = "".join(str(block_price_min).split()[1:-1])
+                block_price_min = room_block.find('span', '_root_8nc73_1 _sizeXS_8nc73_9 font-bold').text
+                block_price_min = "".join(str(block_price_min).split()[1:-1])
 
-            block_dict = {
-                'units': total_units,
-                'area_min': block_min_square,
-                'area_max': block_max_square,
-                'price_min': block_price_min,
-                'objects': []
-            }
-            rooms = room_block.find('div', class_='swiper-wrapper').find_all('div',recursive=False)
+                block_dict = {
+                    'units': total_units,
+                    'area_min': block_min_square,
+                    'area_max': block_max_square,
+                    'price_min': block_price_min,
+                    'objects': []
+                }
 
-            for room in rooms:
-                room_name = room.find('span', "_root_8nc73_1 _sizeM_8nc73_17 font-bold whitespace-break-spaces").text
+                rooms = room_block.find('div', class_='swiper-wrapper').find_all('div',recursive=False)
 
-                room_data = room.find('span', "_root_8nc73_1 _sizeXS_8nc73_9").find('div')
+                for room in rooms:
+                    room_name = room.find('span', "_root_8nc73_1 _sizeM_8nc73_17 font-bold whitespace-break-spaces").text
 
-                room_bedrooms = room_data.find('span').text.split()[0]
+                    room_data = room.find('span', "_root_8nc73_1 _sizeXS_8nc73_9").find('div')
 
-                room_units = ''
-                room_min_square = ''
+                    room_bedrooms = room_data.find('span').text.split()[0]
 
-                if project[1] == 'rc':
-                    room_units = room_data.find_all('div', class_='_point_1g59m_8')[0].next_sibling.split()[0]
-                    room_min_square = room_data.find_all('div', class_='_point_1g59m_8')[1].next_sibling.split()[1]
-                elif project[1] == 'village':
-                    room_units = room_data.find_all('div', class_='_point_1g59m_8')[1].next_sibling.split()[0]
-                    room_min_square = room_data.find_all('div', class_='_point_1g59m_8')[2].next_sibling.split()[1]
+                    room_units = ''
+                    room_min_square = ''
 
-                price = room.find_all('span', class_="_root_8nc73_1 _sizeXS_8nc73_9 font-bold")[0].text
-                room_price_min = ''
-                room_price_max = ''
+                    if project[1] == 'rc':
+                        room_units = room_data.find_all('div', class_='_point_1g59m_8')[0].next_sibling.split()[0]
+                        room_min_square = room_data.find_all('div', class_='_point_1g59m_8')[1].next_sibling.split()[1]
+                    elif project[1] == 'village':
+                        room_units = room_data.find_all('div', class_='_point_1g59m_8')[1].next_sibling.split()[0]
+                        room_min_square = room_data.find_all('div', class_='_point_1g59m_8')[2].next_sibling.split()[1]
 
-                if "—" in price:
-                    parts = price.split("—")
-                    room_price_min = parts[0].split("AED")[0].replace(" ", "")
-                    room_price_max = parts[1].split("AED")[0].replace(" ", "")
-                else:
-                    room_price_min = price.split("AED")[0].replace(" ", "")
+                    price = room.find_all('span', class_="_root_8nc73_1 _sizeXS_8nc73_9 font-bold")[0].text
+                    room_price_min = ''
+                    room_price_max = ''
 
-                room_img = room.find('img', class_="_image_zy93a_12")['src']
+                    if "—" in price:
+                        parts = price.split("—")
+                        room_price_min = parts[0].split("AED")[0].replace(" ", "")
+                        room_price_max = parts[1].split("AED")[0].replace(" ", "")
+                    else:
+                        room_price_min = price.split("AED")[0].replace(" ", "")
 
-                if room_name:
-                    block_dict['objects'].append({
-                        'name': room_name,
-                        'area_min': room_min_square,
-                        'price_min': room_price_min,
-                        'price_max': room_price_max,
-                        'image_link': room_img,
-                        'units_available': room_units,
-                        'bedrooms_count': room_bedrooms,
-                    })
+                    room_img = room.find('img', class_="_image_zy93a_12")['src']
 
+                    if room_name:
+                        block_dict['objects'].append({
+                            'name': room_name,
+                            'area_min': room_min_square,
+                            'price_min': room_price_min,
+                            'price_max': room_price_max,
+                            'image_link': room_img,
+                            'units_available': room_units,
+                            'bedrooms_count': room_bedrooms,
+                        })
+            except:
+                pass
             buildings.append(block_dict)
 
         description = ''
