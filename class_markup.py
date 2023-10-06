@@ -116,7 +116,6 @@ class Parser:
         page_markup = page_data.get_attribute('innerHTML')
         page_soup = BeautifulSoup(page_markup, 'html.parser')
 
-        # room_blocks =  page_soup.find_all('div', class_='_root_16pwg_1 _hasTypicalLayouts_16pwg_8')
         room_blocks =  page_soup.find_all('div', class_='_root_16pwg_1')
 
         buildings = []
@@ -125,6 +124,9 @@ class Parser:
             block_dict = {}
             try:
                 room_block_title = room_block.find('div', class_="CssMediaQuery _hide_md_14ik7_74")
+                room_title = room_block_title.find('div', '_mobileHeader_l3ze4_17').find('span').text
+                block_dict[room_title] = {}
+
                 total_units = room_block_title.find_all('span', class_="_root_8nc73_1 _sizeXS_8nc73_9")[0].text.split()[0]
                 min_max_squares = room_block_title.find_all('span', class_="_root_8nc73_1 _sizeXS_8nc73_9")[1].text
 
@@ -139,7 +141,7 @@ class Parser:
                 block_price_min = room_block.find('span', '_root_8nc73_1 _sizeXS_8nc73_9 font-bold').text
                 block_price_min = "".join(str(block_price_min).split()[1:-1])
 
-                block_dict = {
+                block_dict[room_title] = {
                     'units': total_units,
                     'area_min': block_min_square,
                     'area_max': block_max_square,
@@ -180,7 +182,7 @@ class Parser:
                     room_img = room.find('img', class_="_image_zy93a_12")['src']
 
                     if room_name:
-                        block_dict['objects'].append({
+                        block_dict[room_title]['objects'].append({
                             'name': room_name,
                             'area_min': room_min_square,
                             'price_min': room_price_min,
@@ -191,32 +193,71 @@ class Parser:
                         })
             except:
                 pass
+
+
             buildings.append(block_dict)
+
+        title = ''
+        try:
+            title_block = page_soup.find('header', "_header_p0mcl_10")
+            title = title_block.find('div', 'LinesEllipsis').text
+        except Exception as e:
+            print(str(e))
+            print(f"Can't find title in project {project[0]}. Check it's page")
 
         description = ''
         try:
             description = page_soup.find('div', "_truncateHtmlContent_1g4yz_5").text
-            description = self.remove_html_tags()
-        except:
-            pass
+            description = self.remove_html_tags(description)
+        except Exception as e:
+            print(str(e))
+            print(f"Can't find description in project {project[0]}. Check it's page")
 
         address = ''
         try:
             address = page_soup.find('span', '_root_8nc73_1 _sizeM_8nc73_17 font-bold').text
-        except:
-            pass
+        except Exception as e:
+            print(str(e))
+            print(f"Can't find address in project {project[0]}. Check it's page")
 
         predicted_completion_date = ''
         try:
             predicted_completion_date = page_soup.find('span', '_root_8nc73_1 _sizeM_8nc73_17 _color_blue_8nc73_126 font-bold').text.split()[0].replace("/", "-")
-        except:
-            pass
+        except Exception as e:
+            print(str(e))
+            print(f"Can't find completion date in project {project[0]}. Check it's page")
 
-        developer = ''
+        developer = {
+            'name': '',
+            'description': '',
+            'link': ''
+        }
+
+        developer_name = ''
         try:
-            developer = page_soup.find('div', class_='_root_1hm3d_1').find('span', class_='_root_8nc73_1 _sizeM_8nc73_17 font-bold').text
-        except:
-            pass
+            developer_name = page_soup.find('div', class_='_root_1hm3d_1').find('span', class_='_root_8nc73_1 _sizeM_8nc73_17 font-bold').text
+            developer['name'] = developer_name
+        except Exception as e:
+            print(str(e))
+            print(f"Can't find developer name in project {project[0]}. Check it's page")
+
+        developer_description = ''
+        try:
+            main_block = page_soup.find('main', "_main_194ew_118").find_all('div', recursive=False)[-1]
+            developer_description = main_block.find('div', '_truncateHtmlContent_1g4yz_5 _is_hidden_1g4yz_42').text
+            developer['description'] = developer_description
+        except Exception as e:
+            print(str(e))
+            print(f"Can't find developer description in project {project[0]}. Check it's page")
+
+        developer_link = ''
+        try:
+            main_block = page_soup.find('main', "_main_194ew_118").find_all('div', recursive=False)[-1]
+            developer_link = main_block.find('a')['href']
+            developer['link'] = developer_link
+        except Exception as e:
+            print(str(e))
+            print(f"Can't find developer link in project {project[0]}. Check it's page")
 
         photos = []
         try:
@@ -224,30 +265,38 @@ class Parser:
 
             for elem in photos_arr:
                 photos.append(elem['src'])
-        except:
-            pass
+        except Exception as e:
+            print(str(e))
+            print(f"Can't find photos in project {project[0]}. Check it's page")
 
         brochure = ''
         try:
             brochure = page_soup.find('a', class_="_root_5e8ki_1")['href']
-        except:
-            pass
+        except Exception as e:
+            print(str(e))
+            print(f"Can't find brochure in project {project[0]}. Check it's page")
 
         floors = ''
         try:
             floors = page_soup.find('section', "_root_wmc3k_1").find('span',
                                                                      '_root_8nc73_1 _sizeM_8nc73_17 font-bold').text
-        except:
-            pass
+        except Exception as e:
+            print(str(e))
+            print(f"Can't find floors in project {project[0]}. Check it's page")
 
         advantages = []
-        advantages_blocks = page_soup.find_all("div", "_item_lxv6i_14")
-        for advantage in advantages_blocks:
-            advantages.append(advantage.find('span', '_root_8nc73_1 _sizeS_8nc73_13 ml-2').text)
+        try:
+            advantages_blocks = page_soup.find_all("div", "_item_lxv6i_14")
+            for advantage in advantages_blocks:
+                advantages.append(advantage.find('span', '_root_8nc73_1 _sizeS_8nc73_13 ml-2').text)
+        except Exception as e:
+            print(str(e))
+            print(f"Can't find advantages in project {project[0]}. Check it's page")
 
         project_dict = {
             'id': project[0],
             'type': project_type,
+            'title': title,
             'description': description,
             'address': address,
             'predicted_completion_date': predicted_completion_date,
@@ -283,5 +332,5 @@ class Parser:
 
 parser = Parser(BASE_URL, APARTMENTS_URL, VILLAGE_URL, 1554)
 # res_array = parser.get_projects_info()
-res_ordinary = parser.get_project_info([1555, 'rc'])
+res_ordinary = parser.get_project_info([1577, 'rc'])
 print(res_ordinary)
